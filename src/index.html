@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modern Music Player</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .main-content {
+      flex: 1;
+      overflow-y: auto;
+      padding-bottom: 140px;
+    }
+
+    .playlist-title {
+      text-align: center;
+      font-size: 2.2em;
+      margin: 30px 0;
+      color: #00e5ff;
+      text-shadow: 0 2px 10px rgba(0, 229, 255, 0.5);
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    /* ===== MOBILE: Large box + vertical list ===== */
+    .current-playing-card {
+      background: linear-gradient(135deg, #00e5ff, #2979ff);
+      border-radius: 20px;
+      padding: 25px;
+      margin: 20px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0, 229, 255, 0.4);
+    }
+
+    .current-playing-card img {
+      width: 200px;
+      height: 200px;
+      border-radius: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+    }
+
+    .current-playing-card h2 {
+      font-size: 1.7em;
+      margin: 15px 0 8px;
+      font-weight: 600;
+    }
+
+    .current-playing-card p {
+      font-size: 1.2em;
+      opacity: 0.9;
+    }
+
+    #playlistTracks {
+      padding: 0 20px 20px;
+    }
+
+    .track-item {
+      display: flex;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(10px);
+      padding: 18px;
+      border-radius: 18px;
+      margin-bottom: 14px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .track-item:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateY(-4px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    }
+
+    .track-item.playing {
+      background: linear-gradient(135deg, #00e5ff, #2979ff) !important;
+      transform: scale(1.02);
+      border-color: #00e5ff;
+    }
+
+    .track-item img {
+      width: 65px;
+      height: 65px;
+      border-radius: 12px;
+      margin-right: 18px;
+      object-fit: cover;
+    }
+
+    .track-details h4 { 
+      font-size: 1.15em; 
+      margin-bottom: 6px; 
+      font-weight: 600;
+    }
+    .track-details p { 
+      font-size: 0.95em; 
+      color: #aaa; 
+    }
+
+    /* Bottom Player */
+    .player {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(30, 30, 46, 0.95);
+      backdrop-filter: blur(20px);
+      padding: 16px 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 -10px 40px rgba(0,0,0,0.6);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .player-info { display: flex; align-items: center; gap: 16px; }
+    .player-cover { width: 52px; height: 52px; border-radius: 10px; object-fit: cover; }
+    .player-title { font-size: 1.05em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+    .player-artist { font-size: 0.9em; color: #aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .progress-container {
+      background: rgba(255, 255, 255, 0.1);
+      height: 5px;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: height 0.2s;
+    }
+
+    .progress-container:hover {
+      height: 8px;
+    }
+
+    .progress {
+      background: linear-gradient(90deg, #00e5ff, #2979ff);
+      width: 0%;
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.2s linear;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+    }
+
+    .control-btn {
+      background: none;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.3s;
+      padding: 8px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .control-btn svg {
+      width: 28px;
+      height: 28px;
+      fill: currentColor;
+      transition: all 0.2s;
+    }
+
+    .control-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: scale(1.2);
+    }
+
+    .control-btn:hover svg {
+      fill: #00e5ff;
+    }
+
+    /* دکمه Play/Pause بزرگ‌تر است */
+    #playPause {
+      background: linear-gradient(135deg, #00e5ff, #2979ff);
+      width: 55px;
+      height: 55px;
+      border-radius: 50%;
+      box-shadow: 0 5px 20px rgba(0, 229, 255, 0.5);
+    }
+
+    #playPause svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    #playPause:hover {
+      transform: scale(1.2);
+      box-shadow: 0 8px 25px rgba(0, 229, 255, 0.7);
+    }
+
+    /* حالت فعال برای دکمه‌های Shuffle و Repeat */
+    .control-btn.active {
+      color: #00e5ff;
+    }
+
+    .control-btn.active svg {
+      fill: #00e5ff;
+      filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.7));
+    }
+
+    /* Time display */
+    .time-display {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8em;
+      color: #aaa;
+      margin-top: 5px;
+    }
+
+    /* Volume control */
+    .volume-container {
+      display: none;
+    }
+
+    @media (min-width: 768px) {
+      .volume-container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-left: 20px;
+      }
+      
+      .volume-slider {
+        width: 100px;
+        height: 5px;
+        -webkit-appearance: none;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 3px;
+        outline: none;
+      }
+      
+      .volume-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        background: #00e5ff;
+        cursor: pointer;
+      }
+    }
+
+    /* ===== DESKTOP: All cards horizontal ===== */
+    @media (min-width: 768px) {
+      body { 
+        flex-direction: column;
+      }
+
+      .main-content {
+        flex: 1;
+        padding: 40px;
+        padding-bottom: 180px;
+        overflow: auto;
+        width: 100%;
+      }
+
+      /* Hide big pink box on desktop */
+      #currentPlayingCard { display: none !important; }
+
+      .playlist-title { 
+        margin-bottom: 40px; 
+        font-size: 2.8em; 
+        color: #00e5ff;
+        text-shadow: 0 4px 20px rgba(0, 229, 255, 0.6);
+        letter-spacing: 2px;
+      }
+
+      /* Horizontal card layout */
+      #playlistTracks {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 30px;
+        padding: 20px 0;
+        justify-content: center;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      /* Horizontal cards */
+      .track-item {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        min-width: 220px;
+        max-width: 240px;
+        padding: 25px;
+        border-radius: 20px;
+        flex: 1 0 auto;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .track-item img {
+        width: 180px;
+        height: 180px;
+        margin-right: 0;
+        margin-bottom: 20px;
+        border-radius: 20px;
+        transition: transform 0.3s ease;
+      }
+
+      .track-item:hover img {
+        transform: scale(1.08);
+      }
+
+      .track-details h4 {
+        font-size: 1.3em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 100%;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+
+      .track-details p {
+        font-size: 1.1em;
+        color: #aaa;
+      }
+
+      .track-item.playing {
+        background: linear-gradient(135deg, #00e5ff, #2979ff);
+        transform: scale(1.05);
+        box-shadow: 0 15px 35px rgba(0, 229, 255, 0.4);
+      }
+
+      /* Bottom Player - Enhanced Desktop Version */
+      .player {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 160px;
+        padding: 25px 60px;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 40px;
+        background: linear-gradient(to top, rgba(20, 20, 40, 0.98), rgba(40, 40, 70, 0.95));
+        border-top: 2px solid #00e5ff;
+      }
+
+      .player-info {
+        flex: 1;
+        max-width: 350px;
+        min-width: 250px;
+      }
+
+      .player-cover { 
+        width: 110px; 
+        height: 110px; 
+        border-radius: 15px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+      }
+
+      .player-text {
+        flex: 1;
+      }
+
+      .player-title { 
+        font-size: 1.5em; 
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+
+      .player-artist { 
+        font-size: 1.2em; 
+        color: #ddd;
+      }
+
+      .progress-container { 
+        flex: 2;
+        height: 8px; 
+        margin: 0 20px;
+        max-width: 600px;
+      }
+
+      .progress-container:hover {
+        height: 10px;
+      }
+
+      .controls {
+        flex: 1;
+        max-width: 350px;
+        min-width: 250px;
+        justify-content: center;
+        gap: 25px;
+      }
+
+      /* در دسکتاپ آیکون‌ها بزرگتر می‌شوند */
+      .control-btn svg {
+        width: 32px;
+        height: 32px;
+      }
+
+      #playPause {
+        width: 75px;
+        height: 75px;
+      }
+
+      #playPause svg {
+        width: 32px;
+        height: 32px;
+      }
+
+      #playPause:hover {
+        transform: scale(1.15);
+        box-shadow: 0 10px 30px rgba(0, 229, 255, 0.7);
+      }
+    }
+
+    /* For larger desktops */
+    @media (min-width: 1200px) {
+      .track-item {
+        min-width: 200px;
+        max-width: 220px;
+      }
+      
+      #playlistTracks {
+        gap: 35px;
+      }
+
+      .player {
+        height: 150px;
+        padding: 20px 80px;
+      }
+    }
+
+    /* For very large monitors */
+    @media (min-width: 1600px) {
+      #playlistTracks {
+        max-width: 1600px;
+      }
+      
+      .track-item {
+        min-width: 230px;
+        max-width: 250px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="main-content">
+    <!-- Only shown on mobile -->
+    <div id="currentPlayingCard">
+      <div class="current-playing-card">
+        <img id="currentCover" src="" alt="Cover">
+        <h2 id="currentTitle"></h2>
+        <p id="currentArtist"></p>
+      </div>
+    </div>
+
+    <h2 class="playlist-title">TOP HITS PLAYLIST</h2>
+    <div id="playlistTracks"></div>
+  </div>
+
+  <!-- Player -->
+  <div class="player">
+    <div class="player-info">
+      <img src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80" alt="Cover" class="player-cover" id="cover">
+      <div class="player-text">
+        <div class="player-title" id="title">Loading...</div>
+        <div class="player-artist" id="artist">Artist</div>
+      </div>
+    </div>
+    
+    <div class="progress-container" id="progressContainer">
+      <div class="progress" id="progress"></div>
+      <div class="time-display">
+        <span id="currentTime">0:00</span>
+        <span id="duration">0:00</span>
+      </div>
+    </div>
+    
+    <div class="controls">
+      <!-- Shuffle Button -->
+      <button id="shuffle" class="control-btn" title="Shuffle">
+        <svg viewBox="0 0 24 24">
+          <path d="M18.6 6.6l-2.2 2.2 2.2 2.2 2.2-2.2zM3 12c0-2.8 2.2-5 5-5h4v2H8c-1.7 0-3 1.3-3 3s1.3 3 3 3h4v2H8c-2.8 0-5-2.2-5-5zM16 12h4v2h-4v2l-3-3 3-3v2zm-8 4h4v2H8c-2.8 0-5-2.2-5-5s2.2-5 5-5h4v2H8c-1.7 0-3 1.3-3 3s1.3 3 3 3z"/>
+        </svg>
+      </button>
+
+      <!-- Previous Button -->
+      <button id="prev" class="control-btn" title="Previous">
+        <svg viewBox="0 0 24 24">
+          <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+        </svg>
+      </button>
+
+      <!-- Play/Pause Button -->
+      <button id="playPause" class="control-btn" title="Play">
+        <svg id="playIcon" viewBox="0 0 24 24" style="display: block;">
+          <path d="M8 5v14l11-7z"/>
+        </svg>
+        <svg id="pauseIcon" viewBox="0 0 24 24" style="display: none;">
+          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+        </svg>
+      </button>
+
+      <!-- Next Button -->
+      <button id="next" class="control-btn" title="Next">
+        <svg viewBox="0 0 24 24">
+          <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+        </svg>
+      </button>
+
+      <!-- Repeat Button -->
+      <button id="repeat" class="control-btn" title="Repeat Off">
+        <svg id="repeatOffIcon" viewBox="0 0 24 24" style="display: block;">
+          <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>
+        </svg>
+        <svg id="repeatAllIcon" viewBox="0 0 24 24" style="display: none;">
+          <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2v-2l-4 4 4 4v-2h4v-4h-4z"/>
+        </svg>
+        <svg id="repeatOneIcon" viewBox="0 0 24 24" style="display: none;">
+          <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-5-4v4h2v-2h2v-2h-4z"/>
+        </svg>
+      </button>
+
+      <!-- Volume Control -->
+      <div class="volume-container">
+        <span title="Volume" class="control-btn">
+          <svg viewBox="0 0 24 24">
+            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+          </svg>
+        </span>
+        <input type="range" min="0" max="100" value="70" class="volume-slider" id="volume">
+      </div>
+    </div>
+  </div>
+
+  <audio id="audio" preload="metadata"></audio>
+
+  <script>
+    const playlist = [
+      { title: "Major Distribution", artist: "Drake & 21 Savage", src: "audio/Drake - Major Distribution.mp3", cover: "cover/major distribution.jpg" },
+      { title: "Kick Out", artist: "TravisScott & 21 Savage", src: "audio/1_4 - KICK OUT - Travis Scott (320).mp3", cover: "cover/kick out.jpg" },
+      { title: "Marjan", artist: "Quf & Reveal", src: "audio/09. Marjan (Ft. Reveal).mp3", cover: "cover/quf.jpg" },
+      { title: "Hey Mama", artist: "Kanye West", src: "audio/Late Registration CD 1 TRACK 16 (320).mp3", cover: "cover/hey mama.png" },
+      { title: "Donya Do Shabe", artist: "Taham", src: "audio/1_7 - Donya Do Shabe - Taham (320).mp3", cover: "cover/donya do shabe.jpg" },
+      { title: "Sekseke", artist: "Matin Fattahi", src: "audio/SEKSEKE [Prod. NoTsH, UnArshia].mp3", cover: "cover/sekseke.jpg" },
+      { title: "Furthest Thing", artist: "Drake", src: "https://drive.google.com/file/d/1qzMMBimfj-RiVqeLMAC9JTOVtxe_o_FJ/view?usp=sharing", cover: "cover/furthest thing.png" },
+      { title: "I wonder", artist: "Kanye West", src: "audio/Graduation CD 1 TRACK 4 (320).mp3", cover: "cover/i wonder.png" },
+      { title: "Die Trying", artist: "Drake", src: "audio/1_15 - DIE TRYING - PARTYNEXTDOOR  Drake  Yebba (320).mp3", cover: "cover/die trying.jpg" },
+      { title: "Type Shit", artist: "Future & Playboi Carti & TravisScott", src: "audio/1_4_Type_Shit_Future_Metro_Boomin_Travis_Scott_Playboi_Carti_320.mp3", cover: "cover/type shit.jpg" },
+      { title: "Baraye To", artist: "Gdaal & The Don", src: "audio/Gdaal - Baraye To (Ft The Don & Ahu).mp3", cover: "cover/baraye to.jpg" },
+      { title: "Sobhe Masnavi", artist: "Quf", src: "audio/Quf - Sobhe Masnavi.mp3", cover: "cover/quf.jpg" },
+      { title: "Runnin", artist: "21 Savage", src: "audio/1_2 - Runnin - 21 Savage  Metro Boomin (320).mp3", cover: "cover/runnin.jpg" },
+      { title: "Lil Demon", artist: "Future", src: "audio/1_2 - LIL DEMON - Future (320).mp3", cover: "cover/lil demon.png" },
+      { title: "Ghosse Nakhor Girl", artist: "Hoomaan", src: "audio/Ghosse Nakhor Girl - Hoomaan.mp3", cover: "cover/ghosse nakhor girl.jpg" }
+    ];
+
+    const audio = document.getElementById('audio');
+    const playPauseBtn = document.getElementById('playPause');
+    const prevBtn = document.getElementById('prev');
+    const nextBtn = document.getElementById('next');
+    const shuffleBtn = document.getElementById('shuffle');
+    const repeatBtn = document.getElementById('repeat');
+    const progressContainer = document.getElementById('progressContainer');
+    const progress = document.getElementById('progress');
+    const titleEl = document.getElementById('title');
+    const artistEl = document.getElementById('artist');
+    const coverEl = document.getElementById('cover');
+    const playlistTracksEl = document.getElementById('playlistTracks');
+    const currentTimeEl = document.getElementById('currentTime');
+    const durationEl = document.getElementById('duration');
+    const volumeSlider = document.getElementById('volume');
+
+    const currentPlayingCard = document.getElementById('currentPlayingCard');
+    const currentCover = document.getElementById('currentCover');
+    const currentTitle = document.getElementById('currentTitle');
+    const currentArtist = document.getElementById('currentArtist');
+
+    let currentTrack = 0;
+    let isShuffle = false;
+    let repeatMode = 'off';
+
+    // Format time to MM:SS
+    function formatTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    }
+
+    // مدیریت آیکون Play/Pause
+    function updatePlayPauseIcon(isPlaying) {
+      const playIcon = document.getElementById('playIcon');
+      const pauseIcon = document.getElementById('pauseIcon');
+      
+      if (isPlaying) {
+        playIcon.style.display = 'none';
+        pauseIcon.style.display = 'block';
+        playPauseBtn.setAttribute('title', 'Pause');
+      } else {
+        playIcon.style.display = 'block';
+        pauseIcon.style.display = 'none';
+        playPauseBtn.setAttribute('title', 'Play');
+      }
+    }
+
+    // مدیریت آیکون Repeat
+    function updateRepeatIcon(mode) {
+      const repeatOffIcon = document.getElementById('repeatOffIcon');
+      const repeatAllIcon = document.getElementById('repeatAllIcon');
+      const repeatOneIcon = document.getElementById('repeatOneIcon');
+      
+      // ابتدا همه آیکون‌ها را مخفی کن
+      repeatOffIcon.style.display = 'none';
+      repeatAllIcon.style.display = 'none';
+      repeatOneIcon.style.display = 'none';
+      
+      // آیکون مناسب را نمایش بده
+      if (mode === 'off') {
+        repeatOffIcon.style.display = 'block';
+        repeatBtn.setAttribute('title', 'Repeat Off');
+      } else if (mode === 'all') {
+        repeatAllIcon.style.display = 'block';
+        repeatBtn.setAttribute('title', 'Repeat All');
+      } else if (mode === 'one') {
+        repeatOneIcon.style.display = 'block';
+        repeatBtn.setAttribute('title', 'Repeat One');
+      }
+      
+      // حالت فعال/غیرفعال
+      if (mode !== 'off') {
+        repeatBtn.classList.add('active');
+      } else {
+        repeatBtn.classList.remove('active');
+      }
+    }
+
+    function updateCurrentPlayingCard() {
+      if (playlist.length === 0) return;
+      const track = playlist[currentTrack];
+      currentCover.src = track.cover;
+      currentTitle.textContent = track.title;
+      currentArtist.textContent = track.artist;
+    }
+
+    function renderPlaylist() {
+      playlistTracksEl.innerHTML = '';
+      playlist.forEach((track, index) => {
+        const div = document.createElement('div');
+        div.className = 'track-item' + (index === currentTrack ? ' playing' : '');
+
+        div.innerHTML = `
+          <img src="${track.cover}" alt="Cover">
+          <div class="track-details">
+            <h4>${track.title}</h4>
+            <p>${track.artist}</p>
+          </div>
+        `;
+
+        div.onclick = () => {
+          currentTrack = index;
+          loadTrack(currentTrack);
+          playTrack();
+        };
+
+        playlistTracksEl.appendChild(div);
+      });
+    }
+
+    function loadTrack(index) {
+      const track = playlist[index];
+      audio.src = track.src;
+      titleEl.textContent = track.title;
+      artistEl.textContent = track.artist;
+      coverEl.src = track.cover;
+
+      // Reset time display
+      currentTimeEl.textContent = "0:00";
+      durationEl.textContent = "0:00";
+
+      updateCurrentPlayingCard();
+      renderPlaylist();
+    }
+
+    function playTrack() { 
+      audio.play(); 
+      updatePlayPauseIcon(true);
+    }
+    
+    function pauseTrack() { 
+      audio.pause(); 
+      updatePlayPauseIcon(false);
+    }
+    
+    function togglePlayPause() { 
+      audio.paused ? playTrack() : pauseTrack(); 
+    }
+
+    function nextTrack() {
+      currentTrack = isShuffle ? Math.floor(Math.random() * playlist.length) : (currentTrack + 1) % playlist.length;
+      loadTrack(currentTrack); 
+      playTrack();
+    }
+
+    function prevTrack() {
+      currentTrack = isShuffle ? Math.floor(Math.random() * playlist.length) : (currentTrack === 0 ? playlist.length - 1 : currentTrack - 1);
+      loadTrack(currentTrack); 
+      playTrack();
+    }
+
+    function updateProgress() {
+      if (audio.duration) {
+        const progressPercent = (audio.currentTime / audio.duration) * 100;
+        progress.style.width = `${progressPercent}%`;
+        
+        // Update time display
+        currentTimeEl.textContent = formatTime(audio.currentTime);
+        durationEl.textContent = formatTime(audio.duration);
+      }
+    }
+
+    function setProgress(e) {
+      const rect = progressContainer.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const width = rect.width;
+      const percent = Math.max(0, Math.min(1, clickX / width));
+      audio.currentTime = percent * audio.duration;
+    }
+
+    // Event Listeners
+    playPauseBtn.onclick = togglePlayPause;
+    nextBtn.onclick = nextTrack;
+    prevBtn.onclick = prevTrack;
+    progressContainer.onclick = setProgress;
+    audio.ontimeupdate = updateProgress;
+    
+    audio.onloadedmetadata = function() {
+      durationEl.textContent = formatTime(audio.duration);
+    };
+    
+    audio.onended = () => {
+      if (repeatMode === 'one') { 
+        audio.currentTime = 0; 
+        playTrack(); 
+      }
+      else if (repeatMode === 'all' || currentTrack < playlist.length - 1) {
+        nextTrack();
+      } else {
+        pauseTrack();
+      }
+    };
+
+    // Volume control
+    volumeSlider.oninput = function() {
+      audio.volume = this.value / 100;
+    };
+
+    // Shuffle button
+    shuffleBtn.onclick = () => {
+      isShuffle = !isShuffle;
+      shuffleBtn.classList.toggle('active', isShuffle);
+    };
+
+    // Repeat button
+    repeatBtn.onclick = () => {
+      if (repeatMode === 'off') { 
+        repeatMode = 'all';
+      }
+      else if (repeatMode === 'all') { 
+        repeatMode = 'one';
+      }
+      else { 
+        repeatMode = 'off';
+      }
+      updateRepeatIcon(repeatMode);
+    };
+
+    // Initialize
+    if (playlist.length > 0) {
+      loadTrack(0);
+      audio.volume = volumeSlider.value / 100;
+      updatePlayPauseIcon(false);
+      updateRepeatIcon('off');
+    }
+  </script>
+</body>
+</html>
