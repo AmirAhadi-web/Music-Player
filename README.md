@@ -1,6 +1,6 @@
 # Music-Player
 **DEMO**
-![Image](https://github.com/user-attachments/assets/b3fc2850-51c1-4fee-821f-7b46a34df5b7)
+![Image](https://github.com/user-attachments/assets/d384c1db-4beb-4d06-8988-529b021d5752)
 - [Demo Project](https://amirahadi-web.github.io/Coin-Collector/)
 - Developed by AmirMohammad Ahadi
 - Created - 2025-20-12
